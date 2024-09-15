@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 from datetime import datetime
+import json  # Import json for JSON encoding
 
 
 def init_db():
@@ -11,18 +12,19 @@ def init_db():
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   name TEXT NOT NULL,
                   message TEXT NOT NULL,
-                  datetime TEXT NOT NULL)"""
+                  datetime TEXT NOT NULL,
+                  pixelData TEXT NOT NULL)"""
     )
     conn.commit()
     conn.close()
 
 
-def insert_message(name, message, datetime):
+def insert_message(name, message, datetime, pixelData):
     conn = sqlite3.connect("messages.db")
     c = conn.cursor()
     c.execute(
-        "INSERT INTO messages (name, message, datetime) VALUES (?, ?, ?)",
-        (name, message, datetime),
+        "INSERT INTO messages (name, message, datetime, pixelData) VALUES (?, ?, ?, ?)",
+        (name, message, datetime, pixelData),
     )
     conn.commit()
     conn.close()
@@ -37,7 +39,7 @@ def print_all_entries():
     print("All entries in the database:")
     for entry in entries:
         print(
-            f"ID: {entry[0]}, Name: {entry[1]}, Message: {entry[2]}, Datetime: {entry[3]}"
+            f"ID: {entry[0]}, Name: {entry[1]}, Message: {entry[2]}, Datetime: {entry[3]}, PixelData: {entry[4]}"
         )
 
 
@@ -54,12 +56,13 @@ def submit():
     name = request.form["name"]
     message = request.form["message"]
     datetime_str = request.form["datetime"]
+    pixelData = request.form["pixelData"]
 
     conn = sqlite3.connect("messages.db")
     c = conn.cursor()
     c.execute(
-        "INSERT INTO messages (name, message, datetime) VALUES (?, ?, ?)",
-        (name, message, datetime_str),
+        "INSERT INTO messages (name, message, datetime, pixelData) VALUES (?, ?, ?, ?)",
+        (name, message, datetime_str, pixelData),
     )
     conn.commit()
     conn.close()
@@ -68,6 +71,29 @@ def submit():
     print_all_entries()
 
     return redirect(url_for("index"))
+
+
+@app.route("/view")
+@app.route("/view/")
+def view():
+    conn = sqlite3.connect("messages.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM messages ORDER BY datetime DESC")
+    entries = c.fetchall()
+    conn.close()
+    
+    formatted_entries = []
+    for entry in entries:
+        formatted_entry = {
+            'id': entry[0],
+            'name': entry[1],
+            'message': entry[2],
+            'datetime': entry[3],
+            'pixelData': entry[4]  # Pass pixelData as is, without JSON parsing
+        }
+        formatted_entries.append(formatted_entry)
+    
+    return render_template("view.html", entries=formatted_entries, current_index=0)
 
 
 if __name__ == "__main__":

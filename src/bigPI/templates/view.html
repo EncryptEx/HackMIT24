@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Messages</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <style>
+        #message { 
+            /* shrink text when box needs it */
+        }
+        .message-card {
+            background-color: rgba(165, 173, 216, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px auto;
+            max-width: 600px;
+            text-align: left;
+            color: #333;
+            position: relative;
+        }
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .nav-button {
+            background-color: #9796b6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .nav-button:hover {
+            background-color: #a49fc9;
+        }
+        .nav-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #pixelArt {
+            image-rendering: pixelated;
+            width: 200px;
+            height: 200px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+        <div class="content">
+            <h1>Messages</h1>
+            <div class="message-card">
+                <p id="message"></p>
+                <p id="name"></p>
+                <p id="datetime"></p>
+                <canvas id="pixelArt" width="30" height="30"></canvas>
+                <div class="navigation">
+                    <button id="prevButton" class="nav-button">Previous</button>
+                    <button id="nextButton" class="nav-button">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var entries = JSON.parse('{{ entries|tojson|safe }}');
+        let currentIndex = {{ current_index }};
+
+        function updateCard() {
+            const entry = entries[currentIndex];
+            console.log("Current entry:", entry);  // Debug log
+            document.getElementById('message').textContent = entry.message;
+            document.getElementById('name').textContent = entry.name;
+            document.getElementById('datetime').textContent = new Date(entry.datetime).toLocaleString();
+            
+            console.log("Pixel data:", entry.pixelData);  // Debug log
+            
+            // Parse pixelData if it's a string, otherwise use it directly
+            var pixelData = entry.pixelData;
+            
+            const canvas = document.getElementById('pixelArt');
+            const ctx = canvas.getContext('2d');
+            const pixelSize = canvas.width / 30;
+
+            // clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if(pixelData != ""){
+                
+                pixelData = JSON.parse(pixelData);
+         
+                // Draw pixel arts
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (Array.isArray(pixelData)) {
+                    for (let y = 0; y < pixelData.length; y++) {
+                        for (let x = 0; x < pixelData[y].length; x++) {
+                            if (pixelData[y][x] === 1) {
+                                ctx.fillStyle = 'black';
+                                ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                            }
+                        }
+                    }
+                } else {
+                    console.error("Invalid pixel data format:", pixelData);
+                }
+
+            } else {
+                pixelData = Array(30).fill().map(() => Array(30).fill(0));
+            }
+            document.getElementById('prevButton').disabled = currentIndex === 0;
+            document.getElementById('nextButton').disabled = currentIndex === entries.length - 1;
+        }
+
+        // Call updateCard() immediately after defining it
+        updateCard();
+
+        document.getElementById('prevButton').addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateCard();
+
+            }
+        });
+
+        document.getElementById('nextButton').addEventListener('click', () => {
+            if (currentIndex < entries.length - 1) {
+                currentIndex++;
+                updateCard();
+            }
+        });
+
+    </script>
+</body>
+</html>
